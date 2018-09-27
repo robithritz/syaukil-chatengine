@@ -38,3 +38,19 @@ module.exports.getUser = function(data, callback){
         });
     });
 }
+module.exports.getUserById = function(data, callback){
+    pool.getConnection(function(err, connection) {
+        if (err) throw err; // not connected!
+
+        // Use the connection
+        connection.query("SELECT user_id, user_name, user_phonenum FROM users WHERE user_id='"+ data.user_id +"'", function (error, results, fields) {
+            if(results.length > 0) {
+                connection.release();
+                callback(err, results[0]);
+            }else{
+                connection.release();
+                callback(-2, null);
+            }
+        });
+    });
+}

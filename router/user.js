@@ -2,6 +2,7 @@ var express     = require('express'),
     bcrypt      = require('bcryptjs'),
     myngoose    = require('../models/user'),
     jwt         = require('jsonwebtoken'),
+    passport    = require('passport'),
     secretKey   = require('../config/config').secretKey,
     router      = express.Router();
 
@@ -53,5 +54,9 @@ router.post('/login', (req, res) => {
     });
 
 })
+
+router.get('/getUser', passport.authenticate('jwt', { session: false }), (req, res) => {
+    res.send('oke');
+});
 
 module.exports = router;
