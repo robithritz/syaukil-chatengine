@@ -25,6 +25,7 @@
 | --- | --- | --- |
 | setProfile:response | This event called as a response of **setProfile** emitter, indicating weather client authorized or not. The _undelivered\_chat_ response object are list of undelivered chat that client should parse to the application and give acknowledgment in each chat message | { code, message, undelivered\_chat (array) : [{ chat\_id, room\_id, creator\_user\_id } ,...] } |
 | createPrivateRoom:response | This event called as a response of **createPrivateRoom** emitter. | { code, message, data (object) : { room\_id } } |
+| invitedToRoom | This event called when someone invited a participant to their's room, user should emit a **joinMeToRoom** after got called by this event | { room\_id, inviter\_profile } |
 | sendChat:response | This event called as a response of **sendChat** emitter, giving chat\_id as identifier of chat data | { chat\_id } |
 | receiveChat | called when a user got a chat message from another user of a specific room\_id that this user has joined | { room\_id, chat\_id, sender, chat\_type, chat\_value } |
 | chat\_ack:delivered | This event called as a response of chat acknowledgement for chat creator, indicating that someone has acknowledged the message sent by this user creator | { chat\_id, target\_user\_delivered } |
