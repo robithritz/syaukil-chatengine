@@ -146,21 +146,7 @@ io.on('connection', (socket) => {
             socket.emit('get_chat_history:response', {message: 'Successful', data: result});
         });
     });
-    /*
-    socket.on('spookyRoom', (data) => {
-        // socket.user = data.user_id;
-        // socket.join('spookyRoom')
-        socket.user_name = data.user_id;
-        socket.join('R5baa246d6bfca414f46d96dd');
-        socket.join('R5666');
-        console.log('joined R5baa246d6bfca414f46d96dd');
-        console.log('joined R5666');
-    });
-    socket.on('spookyRoom:chat', (data) => {
-        console.log('kena');
-        socket.broadcast.to('spookyRoom').emit('spookyRoom:chat', {sender: socket.user, value: data});
-    })
-    */
+
 
 
     socket.on('disconnect', () => {
@@ -168,9 +154,7 @@ io.on('connection', (socket) => {
     });
 });
 
-// setInterval(function(){
-//     io.to('spookyRoom').emit('forSpookers', 'hai');
-// },2000);
+
 
 server.listen('3000', () => {
     console.log('Server running  on 3000');

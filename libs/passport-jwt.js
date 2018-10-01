@@ -10,8 +10,8 @@ opts.secretOrKey = secretKey;
 // opts.audience = 'yoursite.net';
 module.exports = function(passport){
     passport.use(new JwtStrategy(opts, function(jwt_payload, done) {
-        console.log(jwt_payload);
-        myngoose.getUser({username: jwt_payload.username}, function(err, data){
+        // console.log(jwt_payload);
+        myngoose.getUserById({user_id: jwt_payload.user_id}, function(err, data){
             if (err) {
                 return done(err, false);
             }
