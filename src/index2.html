@@ -1,40 +1,115 @@
 <html>
     <head>
-        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.1.1/socket.io.slim.js"></script>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+        <link rel="stylesheet" href="/static/css/bootstrap.min.css">
     </head>
 
 </html>
 <body>
-    <button onclick="joinSpooky()">join Spooky</button>
-    <button onclick="setProfile()">set Profile</button>
-    <input type="text" name="teks" id="teks">
-    <button onclick="sendChat('R5baa246d6bfca414f46d96dd')">send</button>
+    <div class="container">
+        <!-- <button onclick="joinSpooky()">join Spooky</button> -->
+        <button onclick="setProfile()">set Profile</button>
+        <input type="text" name="teks" id="teks">
+        <button onclick="sendChat('R5baa246d6bfca414f46d96dd')">send</button>
+        <div class="row">
+            <div class="col1" style="">
+                <div class="list-group" id="list_chatRoom">
+                </div>
+            </div>
+            <div class="col1" style="background-color:chartreuse">
+            </div>
+        </div>
+    </div>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.1.1/socket.io.slim.js"></script>
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.js" integrity="sha256-fNXJFIlca05BIO2Y5zh1xrShK3ME+/lYZ0j+ChxX2DA=" crossorigin="anonymous"></script>
+    <script type="text/javascript" src="/static/js/bootstrap.min.js"></script>
 </body>
 <script>
     var sender;
     var socket = io('http://192.168.1.216:3000');
-    function joinSpooky(){
-        sender = document.getElementById('teks').value;
-        // socket.emit('spookyRoom', {user_id: sender});
-        socket.emit('createPrivateRoom', {participant_id: 92});
-    }
-    function setProfile(){
-        // socket.emit('setProfile', 'JAuth eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjo3LCJ1c2VyX25hbWUiOiJCaWtzdSIsInVzZXJuYW1lIjoiYmlzdSIsInVzZXJfcGhvbmVudW0iOm51bGwsImlhdCI6MTUzNzg3OTI1NH0.ZswBFhH_5WXF3eKLc4GUGBvZsRyrCANOYgLxuVZyqx0');
-        socket.emit('setProfile', 'JAuth eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjo1LCJ1c2VyX25hbWUiOiJSb2JpdGgiLCJ1c2VybmFtZSI6InJvYml0aCIsInVzZXJfcGhvbmVudW0iOm51bGwsImlhdCI6MTUzODAxNTA3OX0.zrlSJ3-XSx84mOos1ixQ33uGzbQGkNIAdVreYHrFCzU');
-    }
+
+    var list_room = [{room_id: '123vvv', pending_chat: []}];
+    // function joinSpooky(){
+    //     sender = document.getElementById('teks').value;
+    //     socket.emit('createPrivateRoom', {participant_id: 92});
+    // }
     function sendChat(room){
         socket.emit('sendChat', {room_id: room, message: document.getElementById('teks').value});
     }
+    function setProfile(){
+        socket.emit('setProfile', 'JAuth eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjo1LCJ1c2VyX25hbWUiOiJSb2JpdGgiLCJ1c2VybmFtZSI6InJvYml0aCIsInVzZXJfcGhvbmVudW0iOm51bGwsImlhdCI6MTUzODAxNTA3OX0.zrlSJ3-XSx84mOos1ixQ33uGzbQGkNIAdVreYHrFCzU');
+    }
+    
     socket.on('createPrivateRoom:response', function(res) {
         console.log('response '+ JSON.stringify(res));
     });
     socket.on('setProfile:response', function(res){
         console.log('response: ' + JSON.stringify(res));
+        var undelivered_chat = res.undelivered_chat;
+        if(undelivered_chat.length > 0){
+            undelivered_chat.forEach(element => {
+                var index = 0;
+                if(list_room.find( room => room.room_id === element.room_id) === undefined){
+                    list_room.push({room_id: element.room_id, pending_chat: []});
+                    index = list_room.map(function(o) { return o.room_id; }).indexOf(element.room_id);
+                    $('#list_chatRoom').append('<a href="#" class="list-group-item list-group-item-action chatRoom" room_index="'+ index +'" room_id="' + element.room_id + '" id="CR_' + element.room_id +'">'+element.room_id+' <span class="badge badge-danger" id="CB_' + element.room_id +'"></span></a>');
+                }else{
+                    index = list_room.map(function(o) { return o.room_id; }).indexOf(element.room_id);
+                }
+                
+                // console.log("index of '" + element.room_id + "': " + index);
+                socket.emit('chat_ack:delivered', {chat_id: element.chat_id});
+                console.log("ACK-"+element.chat_id);
+                list_room[index].pending_chat.push({chat_id: element.chat_id, creator_user_id: element.creator_user_id, chat_type: element.chat_type, chat_value: element.chat_value});
+                that = $('#CB_'+element.room_id);
+                that.html( ( parseInt( that.html() ) || 0 ) + 1 );
+            });
+            console.log(JSON.stringify(list_room));
+        }
+    });
+    socket.on('sendChat:response', function(res){
+        console.log('sendChat:response: ' + JSON.stringify(res));
+    });
+    socket.on('chat_ack:delivered', function(res){
+        console.log('chat delivered to: ' + JSON.stringify(res));
+    });
+    socket.on('chat_ack:read', function(res){
+        console.log('chat read by: ' + JSON.stringify(res));
     });
     socket.on('receiveChat', function(res){
         console.log('receiveChat: ' + JSON.stringify(res));
+        socket.emit('chat_ack:delivered', {chat_id: res.chat_id});
+        console.log('ACK-'+res.chat_id);
+
+        var index = 0;
+        if(list_room.find( room => room.room_id === res.room_id) === undefined){
+            list_room.push({room_id: res.room_id, pending_chat: []});
+            index = list_room.map(function(o) { return o.room_id; }).indexOf(res.room_id);
+            $('#list_chatRoom').append('<a href="#" class="list-group-item list-group-item-action chatRoom" room_index="'+ index +'" room_id="' + res.room_id + '" id="CR_' + res.room_id +'">'+res.room_id+' <span class="badge badge-danger" id="CB_' + res.room_id +'"></span></a>');
+        }else{
+            index = list_room.map(function(o) { return o.room_id; }).indexOf(res.room_id);
+        }
+        
+        list_room[index].pending_chat.push({chat_id: res.chat_id, creator_user_id: res.sender, chat_type: res.chat_type, chat_value: res.chat_value});
+        that = $('#CB_'+res.room_id);
+        that.html( ( parseInt( that.html() ) || 0 ) + 1 );
     });
-    socket.on('spookyRoom:chat', function(res) {
-        console.log('spookerChat :  '+ JSON.stringify(res));
+    socket.on('unauthorize', function(res){
+        console.log('unauth: ' + JSON.stringify(res));
     });
+    $(document).on('click', '.chatRoom', function(){
+        rid = $(this).attr('room_id');
+        idx = $(this).attr('room_index');
+        socket.emit('chat_ack:read', {room_id: rid });
+        console.log('ROOM-ACK-'+ rid);
+
+        list_room[idx].pending_chat = [];
+        $('#CB_'+ rid).html('');
+
+    });
+    function scrollDown(){
+        $('#logger').scrollTop($('#logger')[0].scrollHeight);
+    }
 </script>

@@ -37,6 +37,11 @@ module.exports.getAllMyRoom = function(data, callback) {
         callback(0,result);
     });
 }
+module.exports.getParticipantOfRoom = function(data, callback) {
+    room_info.findOne({_id: data.room_id}, {_id: 0, participant: 1}, function(err, result){
+        callback(0, result.participant);
+    });
+}
 function handleError(err) {
     console.log(err);
     return 1;

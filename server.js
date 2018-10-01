@@ -16,11 +16,12 @@ var User        = require('./router/user');
 var myngoose        = require('./models/user');
 mongoose.connect(mongodbConf);
 var room_info = require('./models/chatRoom');
+var chatEntity = require('./models/chatEntity');
 const __roomPrefix = 'R';
 
 app.use(cors());
 app.use(bodyParser.json())
-app.use('/static', express.static(__dirname+ '/static'));
+app.use('/static', express.static(__dirname+ '/src'));
 
 app.use('/user', User);
 require('./libs/passport-jwt')(passport)
@@ -53,12 +54,18 @@ io.on('connection', (socket) => {
                         socket.join(__roomPrefix + element.id);
                         console.log('joined ' + __roomPrefix + element.id);
                     });
+                    chatEntity.getMyUndelivered({user_id: decoded.user_id}, function(err, result2){
+                        socket.emit('setProfile:response', {code: 1, message: 'Authorized token', undelivered_chat: result2});
+                    });
                 });
-                socket.emit('setProfile:response', {code: 1, message: 'Authorized token', undelivered_chat: []});
             }
         })
     });
     socket.on('createPrivateRoom', (data) => {
+        if(socket.user_profile === undefined){
+            socket.emit('unauthorize', {code: 401, message: 'Socket Unauthorized'});
+            return;
+        }
         // user creator got from token
         // console.log('someone createdroom ' + JSON.stringify(socket.user_profile));
         room_info.createRoom({room_type: 'private', user_creator: socket.user_profile.user_id}, function(err, result){ 
@@ -80,12 +87,66 @@ io.on('connection', (socket) => {
         });
     });
     socket.on('joinMeToRoom', (data) => {
-        socket.join(data.room_id.replace("R", ""));
+        if(socket.user_profile === undefined){
+            socket.emit('unauthorize', {code: 401, message: 'Socket Unauthorized'});
+            return;
+        }
+        socket.join(data.room_id);
     });
     socket.on('sendChat', (data) => {
+        if(socket.user_profile === undefined){
+            socket.emit('unauthorize', {code: 401, message: 'Socket Unauthorized'});
+            return;
+        }
         console.log(JSON.stringify(data));
-        socket.broadcast.to(data.room_id).emit('receiveChat', { room_id: data.room_id, sender: socket.user_profile.user_id, value: data.message});
+        // SAVE MESSAGE TO UNDELIVERED_TABLE OF EACH PARTICIPANT
+
+        chatEntity.pushChat({room_id: data.room_id, user_id: socket.user_profile.user_id, chat_type: 'text', chat_value: data.message }, function(err, result){
+            socket.emit('sendChat:response', {chat_id: result._id});
+            socket.broadcast.to(data.room_id).emit('receiveChat', { room_id: data.room_id, chat_id: result._id, sender: socket.user_profile.user_id, chat_type: 'text', chat_value: data.message});
+        });
     });
+    socket.on('chat_ack:delivered', (data) => {
+        if(socket.user_profile === undefined){
+            socket.emit('unauthorize', {code: 401, message: 'Socket Unauthorized'});
+            return;
+        }
+        console.log('ack:delivered by ' + socket.user_profile.user_id + ' , chat '+ data.chat_id);
+        // MENGHAPUS DATA DARI TABLE UNDELIVERED, NOTIFY USER CREATOR BAHWA MESSAGE DELIVERED
+        chatEntity.ackDelivered({chat_id: data.chat_id, user_id: socket.user_profile.user_id}, function(err, result){
+            io.to(result.user_creator).emit('chat_ack:delivered', {chat_id: data.chat_id, target_user_delivered: socket.user_profile.user_id});
+        });
+    });
+    socket.on('chat_ack:read', (data) => {
+        if(socket.user_profile === undefined){
+            socket.emit('unauthorize', {code: 401, message: 'Socket Unauthorized'});
+            return;
+        }
+        console.log('ack:read by ' + socket.user_profile.user_id + ' , room '+ data.room_id);
+        // MENGHAPUS DATA CHAT DARI TABLE UNREAD DI ROOM DAN TARGET USER YANG BERSANGKUTAN, MENGAMBIL DATA CHAT NYA DAN MENOTIFY MASING2 CREATOR NYA
+        chatEntity.ackRead({room_id: data.room_id, user_id: socket.user_profile.user_id}, function(err, result){
+            console.log('ackRead CB : ' + JSON.stringify(result));
+            result.chat_list.forEach(element => {
+                io.to(element.creator_user_id).emit('chat_ack:read', {room_id: data.room_id, chat_id: element.chat_id, target_user_delivered: socket.user_profile.user_id});    
+            });
+            
+        });
+    });
+    socket.on('get_chat_history', (data) => {
+        if(socket.user_profile === undefined){
+            socket.emit('unauthorize', {code: 401, message: 'Socket Unauthorized'});
+            return;
+        }
+
+        amt = data.amt || 10;
+        pg = data.pg || 1;
+
+        // POOL CHAT HISTORY DESCENDING NEWEST VALIDASI APAKAH user yang merequest itu benar ada di room_id requested
+        chatEntity.getChatHistory({room_id: data.room_id, user_request: socket.user_profile.user_id, amt: amt, pg: pg}, function(err, result){
+            socket.emit('get_chat_history:response', {message: 'Successful', data: result});
+        });
+    });
+    /*
     socket.on('spookyRoom', (data) => {
         // socket.user = data.user_id;
         // socket.join('spookyRoom')
@@ -99,6 +160,7 @@ io.on('connection', (socket) => {
         console.log('kena');
         socket.broadcast.to('spookyRoom').emit('spookyRoom:chat', {sender: socket.user, value: data});
     })
+    */
 
 
     socket.on('disconnect', () => {
