@@ -6,7 +6,7 @@
     ```html
     <html>
         ...
-        <script src="syaukilce.js"></script>
+        <script src="js/syaukilce.js"></script>
         ...
     </html>
     ```
