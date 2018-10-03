@@ -1,0 +1,55 @@
+<html>
+    <head>
+
+    </head>
+    <body>
+        <form id="formSendChat">
+            <input type="text" name="teks" id="teks">
+            <button type="submit">send</button>
+        </form>
+    </body>
+</html>
+<script src="https://code.jquery.com/jquery-3.3.1.slim.js" integrity="sha256-fNXJFIlca05BIO2Y5zh1xrShK3ME+/lYZ0j+ChxX2DA=" crossorigin="anonymous"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.1.1/socket.io.slim.js"></script>
+<script src="js/syaukilce.js"></script>
+
+<script>
+    var room_id = '615000';
+
+    var sce = new SyaukilCE('http://192.168.1.203:3000',
+    {
+        token: 'JAuth eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjo4LCJ1c2VyX25hbWUiOiJBZGFtIEZpa3JpIiwidXNlcm5hbWUiOiJzaGluZG91IiwidXNlcl9waG9uZW51bSI6Iis2MiA4NTktODc2NS00MzIxIiwiaWF0IjoxNTM4NDY4NTU0fQ.rXoyvD4RAd1MLcjfHdxFH0EDETTxEb1oGJ3LmbxcV-U',
+        singleRoomOnly: true,
+        room_id: room_id,
+        success: function(data){
+            console.log('sukses : ' + JSON.stringify(data));
+        },
+        error: function(err){
+            console.log('error : ' + JSON.stringify(err));
+        },
+        chatHistory: function(data){
+            console.log('histo : ' + JSON.stringify(data));
+        },
+        onChatData: function(data){
+            console.log('ada chat ' + JSON.stringify(data));
+        }
+    });
+
+
+    function sendChat(){
+        sce.sendChat({
+            room_id: room_id,
+            chat_type: 'text',
+            chat_value: $('#teks').val(),
+            success: function(data){
+                console.log('chat sent! id :' + data.chat_id);
+            }
+        });
+    }
+
+    $('#formSendChat').on('submit', function(e){
+        e.preventDefault();
+
+        sendChat();
+    });
+</script>

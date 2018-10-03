@@ -47,7 +47,7 @@ module.exports.pushChat = function(data, callback) {
     n.save(function (err, small) {
         if (err) callback(handleError(err), {message: 'Something went wrong'});
 
-        room_info.getParticipantOfRoom({room_id: data.room_id.replace("R","")}, function(err, res){
+        room_info.getParticipantOfRoom({room_id: data.room_id}, function(err, res){
 
             res.forEach(element => {
                 if(element.user_id != data.user_id){
@@ -111,9 +111,9 @@ module.exports.getMyUndelivered = function(data, callback) {
     });
 }
 module.exports.getChatHistory = function(data, callback) {
-    room_info.findOne({_id: data.room_id.replace("R",""), "participant.user_id": data.user_request}, function(err, res){
+    room_info.findRoomMatchParticipant({room_id: data.room_id, participant_user_id: data.user_request}, function(err, res){
         if(res != null) {
-            chat_history.find({room_id: data.room_id}).limit(data.amt).skip((data.pg-1)*data.amt).sort({created_at: -1}).exec(function(err, res){
+            chat_history.find({room_id: data.room_id}, {room_id: 0}).limit(data.amt).skip((data.pg-1)*data.amt).sort({created_at: -1}).exec(function(err, res){
                 if(res != null) {
                     callback(0, res);
                 }else{

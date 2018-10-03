@@ -17,7 +17,7 @@ var myngoose        = require('./models/user');
 mongoose.connect(mongodbConf);
 var room_info = require('./models/chatRoom');
 var chatEntity = require('./models/chatEntity');
-const __roomPrefix = 'R';
+// const __roomPrefix = 'R';
 
 app.use(cors());
 app.use(bodyParser.json())
@@ -51,8 +51,8 @@ io.on('connection', (socket) => {
                     // console.log(JSON.stringify(result));
                     // MENJOIN KAN KE SEMUA ROOM
                     result.forEach(element => {
-                        socket.join(__roomPrefix + element.id);
-                        console.log('joined ' + __roomPrefix + element.id);
+                        socket.join(element.id);
+                        console.log('joined ' + element.id);
                     });
                     chatEntity.getMyUndelivered({user_id: decoded.user_id}, function(err, result2){
                         socket.emit('setProfile:response', {code: 1, message: 'Authorized token', undelivered_chat: result2});
@@ -75,9 +75,9 @@ io.on('connection', (socket) => {
                     if(!err) {
                         // JOINING ALL USER TO THIS ROOM
                         myngoose.getUserById({user_id: socket.id}, (err, prof) => {
-                            socket.join(__roomPrefix + result.room_id);
-                            io.to(data.participant_id).emit('invitedToRoom',{room_id: __roomPrefix + result.room_id, inviter_profile: prof })
-                            socket.emit('createPrivateRoom:response', {code: 1, message: 'Successful', data: {room_id: __roomPrefix + result.room_id}});
+                            socket.join(result.room_id);
+                            io.to(data.participant_id).emit('invitedToRoom',{room_id: result.room_id, inviter_profile: prof })
+                            socket.emit('createPrivateRoom:response', {code: 1, message: 'Successful', data: {room_id: result.room_id}});
                         });
                     }
                 });
@@ -86,6 +86,23 @@ io.on('connection', (socket) => {
             }
         });
     });
+
+    // CLASSMILES PURPOSES //
+
+    socket.on('createSingleRoom', (data) => {
+        if(socket.user_profile === undefined){
+            socket.emit('unauthorize', {code: 401, message: 'Socket Unauthorized'});
+            return;
+        }
+        // user creator got from token
+        // console.log('someone createdroom ' + JSON.stringify(socket.user_profile));
+        room_info.createSingleRoom({room_id: data.room_id, room_type: 'group', user_creator: socket.user_profile.user_id, role: 'normal'}, function(err, result){
+            socket.join(data.room_id);
+            socket.emit('createSingleRoom:response', {code: 1, message: 'Successful'});
+        });
+    });
+    // END CLASSMILES PURPOSES //
+
     socket.on('joinMeToRoom', (data) => {
         if(socket.user_profile === undefined){
             socket.emit('unauthorize', {code: 401, message: 'Socket Unauthorized'});

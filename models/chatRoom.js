@@ -3,7 +3,7 @@ var mongoose    = require('mongoose'),
 
 var room_infoSchema = new Schema({
     room_type: String,
-    participant: [{user_id: Number, role: String}],
+    participant: [ new Schema({user_id: Number, role: String}, {_id: false})],
     created_at: {type: Date, default: Date.now}
 }, {collection: 'room_info'});
 
@@ -22,9 +22,23 @@ module.exports.createRoom = function(data, callback) {
       });
 }
 
-module.exports.roomAddUser = function(data, callback) {
+module.exports.createSingleRoom = function(data, callback) {
 
-    room_info.updateOne({ _id: data.room_id }, { $push: { participant: {user_id: data.user_id, role: data.role} } }, function (err, small) {
+    _id = validateObjectId(data.room_id);
+    room_info.create({_id: _id, room_type: 'group', participant: [{user_id: data.user_creator, role: 'Admin'}]}, function(err, res){
+        if(err.code == 11000){
+            room_info.findOneAndUpdate({_id: _id, 'participant.user_id': { $ne: data.user_creator } }, { $push: { participant: {user_id: data.user_creator, role: data.role} } }, function(err, res2){
+                callback(0, {message: 'Successful'});
+            });
+        }else{
+            callback(0, {message: 'Successful'});
+        }
+    });
+}
+
+module.exports.roomAddUser = function(data, callback) {
+    _id = validateObjectId(data.room_id);
+    room_info.updateOne({ _id: _id }, { $push: { participant: {user_id: data.user_id, role: data.role} } }, function (err, small) {
         if (err) callback(handleError(err), 'Something went wrong');
         
         callback(0,'Successful')
@@ -38,9 +52,22 @@ module.exports.getAllMyRoom = function(data, callback) {
     });
 }
 module.exports.getParticipantOfRoom = function(data, callback) {
-    room_info.findOne({_id: data.room_id}, {_id: 0, participant: 1}, function(err, result){
+    _id = validateObjectId(data.room_id);
+    room_info.findOne({_id: _id}, {_id: 0, participant: 1}, function(err, result){
         callback(0, result.participant);
     });
+}
+module.exports.findRoomMatchParticipant = function(data, callback) {
+    _id = validateObjectId(data.room_id);
+    room_info.findOne({_id: _id, "participant.user_id": data.participant_user_id}, function(err, res){
+        callback(err, res);
+    })
+}
+function validateObjectId(id) {
+    while(id.length < 24){
+        id = id+"0";
+    }
+    return id;
 }
 function handleError(err) {
     console.log(err);
