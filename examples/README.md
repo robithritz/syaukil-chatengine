@@ -36,6 +36,7 @@
 
      sce.sendChat(options);
 **options**
+
 | option name | type | value |
 | --- | --- | --- |
 | room_id | string | room_id of where you wanna send your chat to |
@@ -49,7 +50,7 @@
     sce.sendChat({
         room_id: '123456',
         chat_type: 'text',
-        chat_value: 'hello,
+        chat_value: 'hello',
         success: function(data){
             // returned newly generated chat_id
             // console.log('chat sent! id :' + data.chat_id);
