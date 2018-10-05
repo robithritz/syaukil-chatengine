@@ -12,14 +12,21 @@ var room_info = module.exports = mongoose.model('room_info', room_infoSchema);
 
 module.exports.createRoom = function(data, callback) {
 
-    var n = new room_info();
-    n.room_type = data.room_type;
-    n.participant = [{user_id: data.user_creator, role: 'Admin'}];
-    n.save(function (err, small) {
-        if (err) callback(handleError(err), {message: 'Something went wrong'});
+    room_info.findOne({ room_type: 'private', 'participant.user_id': { $all: [data.user_creator, data.user_invited] } }, function(err , res){
+        if(res){
+            callback(101, {message: 'Successful', room_id: res._id});
+        }else{
+            var n = new room_info();
+            n.room_type = data.room_type;
+            n.participant = [{user_id: data.user_creator, role: 'Admin'}];
+            n.save(function (err, small) {
+                if (err) callback(handleError(err), {message: 'Something went wrong'});
 
-        callback(0, {message: 'Successful', room_id: small.id});
-      });
+                callback(0, {message: 'Successful', room_id: small.id});
+            });
+        }
+    });
+    
 }
 
 module.exports.createSingleRoom = function(data, callback) {

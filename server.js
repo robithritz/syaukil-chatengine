@@ -68,18 +68,24 @@ io.on('connection', (socket) => {
         }
         // user creator got from token
         // console.log('someone createdroom ' + JSON.stringify(socket.user_profile));
-        room_info.createRoom({room_type: 'private', user_creator: socket.user_profile.user_id}, function(err, result){ 
+        room_info.createRoom({room_type: 'private', user_creator: socket.user_profile.user_id, user_invited: data.participant_id}, function(err, result){ 
             if(!err) {
                 room_info.roomAddUser({room_id: result.room_id, user_id: data.participant_id, role: 'Admin'}, function(err, result2){
                      // why role Admin because it's private room, if it isn't then role is null, client can set role with roomSetUserRole
                     if(!err) {
                         // JOINING ALL USER TO THIS ROOM
-                        myngoose.getUserById({user_id: socket.id}, (err, prof) => {
+                        myngoose.getUserById({user_id: socket.user_profile.user_id}, (err, prof) => {
                             socket.join(result.room_id);
                             io.to(data.participant_id).emit('invitedToRoom',{room_id: result.room_id, inviter_profile: prof })
                             socket.emit('createPrivateRoom:response', {code: 1, message: 'Successful', data: {room_id: result.room_id}});
                         });
                     }
+                });
+            } if(err == 101){
+                myngoose.getUserById({user_id: socket.user_profile.user_id}, (err, prof) => {
+                    socket.join(result.room_id);
+                    io.to(data.participant_id).emit('invitedToRoom',{room_id: result.room_id, inviter_profile: prof })
+                    socket.emit('createPrivateRoom:response', {code: 1, message: 'Successful', data: {room_id: result.room_id}});
                 });
             }else{
                 socket.emit('createPrivateRoom:response', {code: -1, message: 'Failed'});
